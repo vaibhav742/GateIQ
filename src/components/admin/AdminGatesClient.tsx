@@ -1,0 +1,92 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { createGateAction, updateGateAction } from "@/lib/admin/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AccountStatusBadge } from "@/components/status/CampusStatusBadge";
+import type { Gate } from "@/types/database";
+
+export function AdminGatesClient({ gates }: { gates: Gate[] }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Gate | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function submit(formData: FormData) {
+    startTransition(async () => {
+      if (editing) await updateGateAction(formData);
+      else await createGateAction(formData);
+      setOpen(false);
+      setEditing(null);
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
+        >
+          Add gate
+        </Button>
+      </div>
+      <div className="grid gap-3">
+        {gates.map((gate) => (
+          <div key={gate.id} className="flex flex-col gap-3 rounded-xl border border-border/80 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-medium">{gate.name}</p>
+              <p className="text-sm text-muted-foreground">{gate.location ?? "No location set"}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <AccountStatusBadge status={gate.status} />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditing(gate);
+                  setOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit gate" : "Add gate"}</DialogTitle>
+          </DialogHeader>
+          <form action={submit} className="grid gap-3">
+            {editing ? <input type="hidden" name="id" value={editing.id} /> : null}
+            <div className="space-y-1.5">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" name="name" defaultValue={editing?.name} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="location">Location</Label>
+              <Input id="location" name="location" defaultValue={editing?.location ?? ""} />
+            </div>
+            {editing ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="status">Status</Label>
+                <Input id="status" name="status" defaultValue={editing.status} />
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button type="submit" disabled={pending}>
+                Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
