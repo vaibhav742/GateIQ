@@ -32,6 +32,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
           id_card_path: string | null;
+          security_shift: "morning" | "night" | null;
         };
         Insert: {
           id: string;
@@ -55,6 +56,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           id_card_path?: string | null;
+          security_shift?: "morning" | "night" | null;
         };
         Update: {
           id?: string;
@@ -78,6 +80,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           id_card_path?: string | null;
+          security_shift?: "morning" | "night" | null;
         };
         Relationships: [];
       };
@@ -242,6 +245,27 @@ export type Database = {
           security_user_id?: string;
           gate_id?: string;
           active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      security_shift_guards: {
+        Row: {
+          id: string;
+          security_user_id: string;
+          full_name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          security_user_id: string;
+          full_name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          security_user_id?: string;
+          full_name?: string;
           created_at?: string;
         };
         Relationships: [];
@@ -440,6 +464,8 @@ export type EntryExitLog = Database["public"]["Tables"]["entry_exit_logs"]["Row"
 export type StudentQrCode = Database["public"]["Tables"]["student_qr_codes"]["Row"];
 export type SecurityGateAssignment =
   Database["public"]["Tables"]["security_gate_assignments"]["Row"];
+export type SecurityShiftGuard =
+  Database["public"]["Tables"]["security_shift_guards"]["Row"];
 
 export type CampusBoardRow =
   Database["public"]["Functions"]["get_campus_status_board"]["Returns"][number];

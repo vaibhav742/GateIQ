@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createGateAction, updateGateAction } from "@/lib/admin/actions";
+import { toast } from "sonner";
+import { createGateAction, deleteGateAction, updateGateAction } from "@/lib/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountStatusBadge } from "@/components/status/CampusStatusBadge";
+import { nativeSelectClass } from "@/lib/utils";
 import type { Gate } from "@/types/database";
 
 export function AdminGatesClient({ gates }: { gates: Gate[] }) {
@@ -14,13 +16,24 @@ export function AdminGatesClient({ gates }: { gates: Gate[] }) {
   const [editing, setEditing] = useState<Gate | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function submit(formData: FormData) {
+  function run(action: () => Promise<{ error?: string; success?: boolean } | void>, successMessage?: string) {
     startTransition(async () => {
-      if (editing) await updateGateAction(formData);
-      else await createGateAction(formData);
+      const result = await action();
+      if (result && "error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      if (successMessage) toast.success(successMessage);
       setOpen(false);
       setEditing(null);
     });
+  }
+
+  function submit(formData: FormData) {
+    run(
+      () => (editing ? updateGateAction(formData) : createGateAction(formData)),
+      editing ? "Gate updated." : "Gate added.",
+    );
   }
 
   return (
@@ -42,7 +55,7 @@ export function AdminGatesClient({ gates }: { gates: Gate[] }) {
               <p className="font-medium">{gate.name}</p>
               <p className="text-sm text-muted-foreground">{gate.location ?? "No location set"}</p>
             </div>
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2">
               <AccountStatusBadge status={gate.status} />
               <Button
                 size="sm"
@@ -53,6 +66,17 @@ export function AdminGatesClient({ gates }: { gates: Gate[] }) {
                 }}
               >
                 Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={pending}
+                onClick={() => {
+                  if (!confirm(`Delete ${gate.name}?`)) return;
+                  run(() => deleteGateAction(gate.id), "Gate deleted.");
+                }}
+              >
+                Delete
               </Button>
             </div>
           </div>
@@ -76,7 +100,15 @@ export function AdminGatesClient({ gates }: { gates: Gate[] }) {
             {editing ? (
               <div className="space-y-1.5">
                 <Label htmlFor="status">Status</Label>
-                <Input id="status" name="status" defaultValue={editing.status} />
+                <select
+                  id="status"
+                  name="status"
+                  defaultValue={editing.status === "inactive" ? "inactive" : "active"}
+                  className={nativeSelectClass}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
             ) : null}
             <DialogFooter>

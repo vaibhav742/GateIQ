@@ -8,7 +8,7 @@ export default async function AdminGatesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Gates" description="Campus gates are stored in the database and never hard-coded." />
+      <PageHeader title="Gates" description="Add campus gates and remove unused ones. Gates with scan history can be deactivated instead." />
       <AdminGatesClient gates={gates ?? []} />
     </div>
   );
