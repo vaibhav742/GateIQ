@@ -5,8 +5,11 @@ export type LookupSuccess = {
     name: string;
     roll_number: string | null;
     batch: string | null;
-    section: string | null;
+    hostel: string | null;
+    room_number: string | null;
+    phone: string | null;
     account_status: string;
+    id_card_path?: string | null;
   };
   campus_status: "INSIDE" | "OUTSIDE" | "UNKNOWN";
   next_action: "ENTRY" | "EXIT";
@@ -22,6 +25,8 @@ export type MovementSuccess = {
     roll_number: string | null;
     batch?: string | null;
     section?: string | null;
+    hostel?: string | null;
+    room_number?: string | null;
   };
   action: "ENTRY" | "EXIT";
   status: "INSIDE" | "OUTSIDE";

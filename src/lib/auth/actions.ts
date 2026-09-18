@@ -3,6 +3,7 @@
 import { redirect, unstable_rethrow } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { homeForRole, type UserRole } from "@/config/campus";
+import { resolveStudentEmail } from "@/lib/registration/format";
 
 function friendlyAuthError(message: string) {
   const value = message.toLowerCase();
@@ -15,6 +16,14 @@ function friendlyAuthError(message: string) {
   return "Unable to sign in. Please try again.";
 }
 
+function studentAuthError(message: string) {
+  const value = message.toLowerCase();
+  if (value.includes("invalid login") || value.includes("invalid credentials")) {
+    return "Invalid username or password.";
+  }
+  return friendlyAuthError(message);
+}
+
 function safeNextPath(next: string, role: UserRole) {
   if (!next.startsWith("/") || next.startsWith("//") || next.includes("\\")) {
     return null;
@@ -25,28 +34,45 @@ function safeNextPath(next: string, role: UserRole) {
   return null;
 }
 
+function loginPath(error: string, staff: boolean, next: string) {
+  const params = new URLSearchParams({ error });
+  if (staff) params.set("role", "staff");
+  if (next) params.set("next", next);
+  return `/login?${params.toString()}`;
+}
+
 export async function signInAction(formData: FormData) {
+  const staff = String(formData.get("account_kind") ?? "") === "staff";
+  const password = String(formData.get("password") ?? "");
+  const next = String(formData.get("next") ?? "");
+
   try {
-    const email = String(formData.get("email") ?? "").trim();
-    const password = String(formData.get("password") ?? "");
-    const next = String(formData.get("next") ?? "");
+    const email = staff
+      ? String(formData.get("email") ?? "").trim().toLowerCase()
+      : resolveStudentEmail(String(formData.get("email_local") ?? ""));
 
     if (!email || !password) {
-      redirect("/login?error=missing");
+      redirect(loginPath("missing", staff, next));
     }
 
     const supabase = await createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      redirect(`/login?error=${encodeURIComponent(friendlyAuthError(error.message))}`);
+      redirect(
+        loginPath(
+          staff ? friendlyAuthError(error.message) : studentAuthError(error.message),
+          staff,
+          next,
+        ),
+      );
     }
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
     const userId = userData.user?.id;
 
     if (userError || !userId) {
-      redirect("/login?error=session");
+      redirect(loginPath("session", staff, next));
     }
 
     const { data: profile } = await supabase
@@ -57,14 +83,14 @@ export async function signInAction(formData: FormData) {
 
     if (!profile || profile.status !== "active") {
       await supabase.auth.signOut();
-      redirect("/login?error=inactive");
+      redirect(loginPath("inactive", staff, next));
     }
 
     const role = profile.role as UserRole;
     redirect(safeNextPath(next, role) ?? homeForRole(role));
   } catch (error) {
     unstable_rethrow(error);
-    redirect(`/login?error=${encodeURIComponent("Unable to sign in. Please try again.")}`);
+    redirect(loginPath("Unable to sign in. Please try again.", staff, next));
   }
 }
 

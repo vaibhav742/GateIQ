@@ -2,6 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { isTenDigitPhone } from "@/config/campus";
+import { createAdminClient, hasServiceRoleConfig } from "@/lib/supabase/admin";
+import { ID_CARD_BUCKET, ID_CARD_MAX_BYTES, idCardObjectPath } from "@/lib/registration/id-card";
 import { normalizeEmailDomain, type PublicRegistrationForm } from "@/lib/registration/format";
 
 type CheckResult = {
@@ -17,11 +20,23 @@ export async function registerStudentAction(formData: FormData) {
   const lastName = String(formData.get("last_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const serial = String(formData.get("serial") ?? "").trim();
+  const hostel = String(formData.get("hostel") ?? "").trim();
+  const roomNumber = String(formData.get("room_number") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm_password") ?? "");
 
   if (!firstName || !lastName || !email || !serial || !password) {
     return { error: "Please complete all required fields." };
+  }
+  if (!hostel) {
+    return { error: "Please select a hostel." };
+  }
+  if (!roomNumber) {
+    return { error: "Enter your room number." };
+  }
+  if (!isTenDigitPhone(phone)) {
+    return { error: "Enter a 10-digit mobile number." };
   }
   if (password.length < 8) {
     return { error: "Use a password with at least 8 characters." };
@@ -30,7 +45,20 @@ export async function registerStudentAction(formData: FormData) {
     return { error: "Passwords do not match." };
   }
 
+  const idCard = await readIdCardUpload(formData.get("id_card"));
+  if ("error" in idCard) {
+    return { error: idCard.error };
+  }
+
   const supabase = await createClient();
+  const publicForm = await loadPublicRegistrationForm(slug);
+  if (!publicForm) {
+    return { error: "Registration is currently closed. Please contact the administration." };
+  }
+  if (!publicForm.hostels.includes(hostel)) {
+    return { error: "Please select a hostel." };
+  }
+
   const { data: checkData, error: checkError } = await supabase.rpc("check_student_registration", {
     p_slug: slug,
     p_email: email,
@@ -46,7 +74,7 @@ export async function registerStudentAction(formData: FormData) {
     return { error: check?.message ?? "Unable to complete registration." };
   }
 
-  const { error: signUpError } = await supabase.auth.signUp({
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -56,6 +84,9 @@ export async function registerStudentAction(formData: FormData) {
         full_name: `${firstName} ${lastName}`,
         registration_slug: slug,
         registration_serial: serial,
+        hostel,
+        room_number: roomNumber,
+        phone,
       },
     },
   });
@@ -71,10 +102,34 @@ export async function registerStudentAction(formData: FormData) {
     if (message.includes("invalid_email")) {
       return { error: "Please use your IIM Calcutta email address." };
     }
+    if (message.includes("invalid_phone")) {
+      return { error: "Enter a 10-digit mobile number." };
+    }
+    if (message.includes("invalid_hostel")) {
+      return { error: "Please select a hostel." };
+    }
+    if (message.includes("invalid_room")) {
+      return { error: "Enter your room number." };
+    }
     if (message.includes("registration_closed")) {
       return { error: "Registration is currently closed. Please contact the administration." };
     }
     return { error: "Unable to complete registration. Please try again." };
+  }
+
+  const userId = signUpData.user?.id;
+  if (!userId) {
+    await supabase.auth.signOut();
+    return { error: "Unable to complete registration. Please try again." };
+  }
+
+  const uploaded = await storeStudentIdCard(supabase, userId, idCard.file);
+  if (!uploaded) {
+    if (hasServiceRoleConfig()) {
+      await createAdminClient().auth.admin.deleteUser(userId);
+    }
+    await supabase.auth.signOut();
+    return { error: "Could not save the ID photo. Please try registering again." };
   }
 
   await supabase.auth.signOut();
@@ -91,7 +146,11 @@ export async function loadPublicRegistrationForm(slug: string): Promise<PublicRe
   if (error || !data) return null;
   const payload = data as { success?: boolean; form?: PublicRegistrationForm };
   if (!payload.success || !payload.form) return null;
-  return payload.form;
+  return {
+    ...payload.form,
+    email_domain: normalizeEmailDomain(payload.form.email_domain),
+    hostels: parseHostelNames(payload.form.hostels),
+  };
 }
 
 export async function loadAdminRegistrationPreview(slug: string): Promise<PublicRegistrationForm | null> {
@@ -114,6 +173,12 @@ export async function loadAdminRegistrationPreview(slug: string): Promise<Public
 
   if (!batch) return null;
 
+  const { data: hostels } = await supabase
+    .from("hostels")
+    .select("name")
+    .eq("status", "active")
+    .order("name");
+
   return {
     name: form.name,
     slug: form.slug,
@@ -122,5 +187,48 @@ export async function loadAdminRegistrationPreview(slug: string): Promise<Public
     batch_number: batch.batch_number,
     batch_name: batch.name,
     registration_suffix: `/${batch.batch_number}`,
+    hostels: (hostels ?? []).map((row) => row.name),
   };
+}
+
+function parseHostelNames(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+async function readIdCardUpload(value: FormDataEntryValue | null) {
+  if (!(value instanceof File) || value.size === 0) {
+    return { error: "Photograph the front of your ID card." };
+  }
+  if (value.size > ID_CARD_MAX_BYTES) {
+    return { error: "ID photo is too large. Capture it again." };
+  }
+
+  const bytes = new Uint8Array(await value.arrayBuffer());
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
+    return { error: "Upload a JPEG photo of the front of your ID card." };
+  }
+
+  return { file: new Blob([bytes], { type: "image/jpeg" }) };
+}
+
+async function storeStudentIdCard(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  file: Blob,
+) {
+  const path = idCardObjectPath(userId);
+  const storageClient = hasServiceRoleConfig() ? createAdminClient() : supabase;
+  const { error: uploadError } = await storageClient.storage.from(ID_CARD_BUCKET).upload(path, file, {
+    contentType: "image/jpeg",
+    upsert: true,
+    cacheControl: "3600",
+  });
+  if (uploadError) return false;
+
+  const { error: profileError } = await storageClient
+    .from("profiles")
+    .update({ id_card_path: path })
+    .eq("id", userId);
+  return !profileError;
 }

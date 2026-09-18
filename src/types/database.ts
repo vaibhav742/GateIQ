@@ -19,6 +19,8 @@ export type Database = {
           batch: string | null;
           section: string | null;
           phone: string | null;
+          hostel: string | null;
+          room_number: string | null;
           first_name: string | null;
           last_name: string | null;
           batch_id: string | null;
@@ -29,6 +31,7 @@ export type Database = {
           status: "active" | "inactive" | "archived";
           created_at: string;
           updated_at: string;
+          id_card_path: string | null;
         };
         Insert: {
           id: string;
@@ -39,6 +42,8 @@ export type Database = {
           batch?: string | null;
           section?: string | null;
           phone?: string | null;
+          hostel?: string | null;
+          room_number?: string | null;
           first_name?: string | null;
           last_name?: string | null;
           batch_id?: string | null;
@@ -49,6 +54,7 @@ export type Database = {
           status?: "active" | "inactive" | "archived";
           created_at?: string;
           updated_at?: string;
+          id_card_path?: string | null;
         };
         Update: {
           id?: string;
@@ -59,6 +65,8 @@ export type Database = {
           batch?: string | null;
           section?: string | null;
           phone?: string | null;
+          hostel?: string | null;
+          room_number?: string | null;
           first_name?: string | null;
           last_name?: string | null;
           batch_id?: string | null;
@@ -69,6 +77,7 @@ export type Database = {
           status?: "active" | "inactive" | "archived";
           created_at?: string;
           updated_at?: string;
+          id_card_path?: string | null;
         };
         Relationships: [];
       };
@@ -132,6 +141,27 @@ export type Database = {
           auto_approve?: boolean;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      hostels: {
+        Row: {
+          id: string;
+          name: string;
+          status: "active" | "inactive";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          status?: "active" | "inactive";
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          status?: "active" | "inactive";
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -295,6 +325,8 @@ export type Database = {
           roll_number: string | null;
           batch: string | null;
           section: string | null;
+          hostel: string | null;
+          room_number: string | null;
           campus_status: string;
           last_action: string | null;
           last_gate_id: string | null;
@@ -368,6 +400,7 @@ export type Database = {
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Batch = Database["public"]["Tables"]["batches"]["Row"];
 export type RegistrationForm = Database["public"]["Tables"]["registration_forms"]["Row"];
+export type Hostel = Database["public"]["Tables"]["hostels"]["Row"];
 export type Gate = Database["public"]["Tables"]["gates"]["Row"];
 export type EntryExitLog = Database["public"]["Tables"]["entry_exit_logs"]["Row"];
 export type StudentQrCode = Database["public"]["Tables"]["student_qr_codes"]["Row"];

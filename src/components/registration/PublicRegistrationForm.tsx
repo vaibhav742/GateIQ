@@ -6,20 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BrandLockup } from "@/components/brand/BrandMark";
+import { isTenDigitPhone } from "@/config/campus";
 import { registerStudentAction } from "@/lib/registration/actions";
-import type { PublicRegistrationForm } from "@/lib/registration/format";
-import { displayEmailDomain } from "@/lib/registration/format";
+import {
+  displayEmailDomain,
+  extractEmailLocalPart,
+  isEmailLocalPart,
+  type PublicRegistrationForm as PublicForm,
+} from "@/lib/registration/format";
+import { nativeSelectClass } from "@/lib/utils";
+import { IdCardCapture } from "@/components/registration/IdCardCapture";
 
 export function PublicRegistrationForm({
   form,
   preview,
 }: {
-  form: PublicRegistrationForm;
+  form: PublicForm;
   preview?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ rollNumber: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [idCard, setIdCard] = useState<File | null>(null);
 
   if (success) {
     return (
@@ -29,7 +37,9 @@ export function PublicRegistrationForm({
           Your student account has been created for registration number{" "}
           <span className="font-medium text-foreground">{success.rollNumber}</span>.
         </p>
-        <p className="mt-3 text-sm text-muted-foreground">You can now sign in using your IIM Calcutta email.</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          You can now sign in with your IIM Calcutta username.
+        </p>
         <Link
           href="/login"
           className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground"
@@ -56,23 +66,35 @@ export function PublicRegistrationForm({
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
           const domain = form.email_domain.replace(/^@+/, "").toLowerCase();
-          const localPart = String(formData.get("email_local") ?? "")
-            .trim()
-            .toLowerCase()
-            .replace(/@.*$/, "");
+          const localPart = extractEmailLocalPart(String(formData.get("email_local") ?? ""), form.email_domain);
           const email = localPart ? `${localPart}@${domain}` : "";
           formData.set("email", email);
           const serial = String(formData.get("serial") ?? "").trim();
+          const hostel = String(formData.get("hostel") ?? "").trim();
+          const roomNumber = String(formData.get("room_number") ?? "").trim();
+          const phone = String(formData.get("phone") ?? "").trim();
           const password = String(formData.get("password") ?? "");
           const confirm = String(formData.get("confirm_password") ?? "");
           setError(null);
 
-          if (!localPart || localPart.includes(" ")) {
-            setError("Please use your IIM Calcutta email address.");
+          if (!isEmailLocalPart(localPart)) {
+            setError("Enter only your IIM Calcutta username, without the email domain.");
             return;
           }
           if (!/^[0-9]{3,8}$/.test(serial)) {
             setError("Enter a valid registration number.");
+            return;
+          }
+          if (!(form.hostels ?? []).includes(hostel)) {
+            setError("Please select a hostel.");
+            return;
+          }
+          if (!roomNumber) {
+            setError("Enter your room number.");
+            return;
+          }
+          if (!isTenDigitPhone(phone)) {
+            setError("Enter a 10-digit mobile number.");
             return;
           }
           if (password.length < 8) {
@@ -83,6 +105,11 @@ export function PublicRegistrationForm({
             setError("Passwords do not match.");
             return;
           }
+          if (!idCard) {
+            setError("Photograph the front of your ID card.");
+            return;
+          }
+          formData.set("id_card", idCard);
 
           startTransition(async () => {
             const result = await registerStudentAction(formData);
@@ -109,6 +136,7 @@ export function PublicRegistrationForm({
               inputMode="email"
               autoComplete="username"
               required
+              placeholder="username"
               className="h-11 min-w-0 border-0 shadow-none focus-visible:ring-0"
               aria-describedby="email-domain"
             />
@@ -138,6 +166,37 @@ export function PublicRegistrationForm({
             </span>
           </div>
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="hostel">Hostel</Label>
+          <select
+            id="hostel"
+            name="hostel"
+            required
+            defaultValue=""
+            className={nativeSelectClass + " h-11 bg-white"}
+          >
+            <option value="" disabled>
+              {(form.hostels ?? []).length ? "Select hostel" : "No hostels available"}
+            </option>
+            {(form.hostels ?? []).map((hostel) => (
+              <option key={hostel} value={hostel}>
+                {hostel}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Field id="room_number" name="room_number" label="Room number" autoComplete="off" placeholder="e.g. 214" />
+        <Field
+          id="phone"
+          name="phone"
+          label="Mobile number"
+          inputMode="numeric"
+          autoComplete="tel"
+          placeholder="10-digit number"
+          maxLength={10}
+          pattern="[0-9]{10}"
+        />
+        <IdCardCapture value={idCard} onChange={setIdCard} disabled={pending || preview} />
         <Field id="password" name="password" label="Password" type="password" autoComplete="new-password" />
         <Field
           id="confirm_password"
@@ -169,6 +228,9 @@ function Field({
   type = "text",
   autoComplete,
   placeholder,
+  inputMode,
+  maxLength,
+  pattern,
 }: {
   id: string;
   name: string;
@@ -176,6 +238,9 @@ function Field({
   type?: string;
   autoComplete?: string;
   placeholder?: string;
+  inputMode?: "numeric" | "tel" | "text" | "email";
+  maxLength?: number;
+  pattern?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -186,6 +251,9 @@ function Field({
         type={type}
         autoComplete={autoComplete}
         placeholder={placeholder}
+        inputMode={inputMode}
+        maxLength={maxLength}
+        pattern={pattern}
         required
         className="h-11"
       />

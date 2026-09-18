@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
-import { normalizeEmailDomain, slugFromBatch } from "@/lib/registration/format";
+import { DEFAULT_EMAIL_DOMAIN, slugFromBatch } from "@/lib/registration/format";
 
 function required(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -30,7 +30,7 @@ export async function createBatchAction(formData: FormData) {
     batch_id: batch.id,
     name: `IIM Calcutta PGP ${batchNumber} Registration`,
     slug: slugFromBatch(batchNumber),
-    email_domain: "iimcal.ac.in",
+    email_domain: DEFAULT_EMAIL_DOMAIN,
     status: "inactive",
     auto_approve: true,
   });
@@ -48,11 +48,10 @@ export async function saveRegistrationFormAction(formData: FormData) {
   const id = required(formData, "id");
   const name = required(formData, "name");
   const slug = required(formData, "slug").toLowerCase();
-  const emailDomain = normalizeEmailDomain(required(formData, "email_domain"));
   const autoApprove = required(formData, "auto_approve") !== "false";
 
-  if (!name || !emailDomain) {
-    return { error: "Form name and email domain are required." };
+  if (!name) {
+    return { error: "Form name is required." };
   }
   if (!/^[a-z0-9-]{3,40}$/.test(slug)) {
     return { error: "Use a short public URL slug, such as pgp63." };
@@ -63,7 +62,7 @@ export async function saveRegistrationFormAction(formData: FormData) {
     .update({
       name,
       slug,
-      email_domain: emailDomain,
+      email_domain: DEFAULT_EMAIL_DOMAIN,
       auto_approve: autoApprove,
     })
     .eq("id", id);
@@ -155,5 +154,94 @@ export async function setRegistrationDecisionAction(input: {
 
   revalidatePath("/admin/registration");
   revalidatePath("/admin/students");
+  return { success: true };
+}
+
+function normalizeHostelName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function revalidateHostelSurfaces() {
+  revalidatePath("/admin/registration");
+  revalidatePath("/admin/students");
+  revalidatePath("/register", "layout");
+}
+
+export async function createHostelAction(formData: FormData) {
+  const { supabase } = await requireRole("admin");
+  const name = normalizeHostelName(required(formData, "name"));
+  if (!name || name.length > 40) {
+    return { error: "Enter a hostel name (up to 40 characters)." };
+  }
+
+  const { error } = await supabase.from("hostels").insert({ name, status: "active" });
+  if (error) {
+    return { error: "Unable to add this hostel. The name may already exist." };
+  }
+
+  revalidateHostelSurfaces();
+  return { success: true };
+}
+
+export async function updateHostelAction(formData: FormData) {
+  const { supabase } = await requireRole("admin");
+  const id = required(formData, "id");
+  const name = normalizeHostelName(required(formData, "name"));
+  const status = required(formData, "status") === "inactive" ? "inactive" : "active";
+
+  if (!id || !name || name.length > 40) {
+    return { error: "Enter a hostel name (up to 40 characters)." };
+  }
+
+  const { data: current, error: currentError } = await supabase
+    .from("hostels")
+    .select("id, name")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (currentError || !current) {
+    return { error: "Unable to update this hostel." };
+  }
+
+  const { error } = await supabase.from("hostels").update({ name, status }).eq("id", id);
+  if (error) {
+    return { error: "Unable to update this hostel. The name may already exist." };
+  }
+
+  if (current.name !== name) {
+    await supabase.from("profiles").update({ hostel: name }).eq("hostel", current.name);
+  }
+
+  revalidateHostelSurfaces();
+  return { success: true };
+}
+
+export async function deleteHostelAction(hostelId: string) {
+  const { supabase } = await requireRole("admin");
+  const { data: hostel, error: hostelError } = await supabase
+    .from("hostels")
+    .select("id, name")
+    .eq("id", hostelId)
+    .maybeSingle();
+
+  if (hostelError || !hostel) {
+    return { error: "Unable to delete this hostel." };
+  }
+
+  const { count } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("hostel", hostel.name);
+
+  if (count && count > 0) {
+    return { error: "This hostel is assigned to students. Deactivate it instead of deleting." };
+  }
+
+  const { error } = await supabase.from("hostels").delete().eq("id", hostelId);
+  if (error) {
+    return { error: "Unable to delete this hostel." };
+  }
+
+  revalidateHostelSurfaces();
   return { success: true };
 }

@@ -15,11 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { AccountStatusBadge } from "@/components/status/CampusStatusBadge";
 import { nativeSelectClass } from "@/lib/utils";
-import type { Profile } from "@/types/database";
+import type { Hostel, Profile } from "@/types/database";
 
 type StudentRow = Profile & { qr_status: string | null };
 
-export function AdminStudentsClient({ students }: { students: StudentRow[] }) {
+export function AdminStudentsClient({
+  students,
+  hostels,
+}: {
+  students: StudentRow[];
+  hostels: Hostel[];
+}) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<StudentRow | null>(null);
   const [deleting, setDeleting] = useState<StudentRow | null>(null);
@@ -97,7 +103,8 @@ export function AdminStudentsClient({ students }: { students: StudentRow[] }) {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Batch</th>
-                <th className="px-4 py-3">Section</th>
+                <th className="px-4 py-3">Hostel</th>
+                <th className="px-4 py-3">Room</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">QR Status</th>
                 <th className="px-4 py-3">Actions</th>
@@ -110,7 +117,8 @@ export function AdminStudentsClient({ students }: { students: StudentRow[] }) {
                   <td className="px-4 py-3">{student.full_name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{student.email}</td>
                   <td className="px-4 py-3">{student.batch ?? "—"}</td>
-                  <td className="px-4 py-3">{student.section ?? "—"}</td>
+                  <td className="px-4 py-3">{student.hostel ?? "—"}</td>
+                  <td className="px-4 py-3">{student.room_number ?? "—"}</td>
                   <td className="px-4 py-3">
                     <AccountStatusBadge status={student.status} />
                   </td>
@@ -173,11 +181,27 @@ export function AdminStudentsClient({ students }: { students: StudentRow[] }) {
             {!editing ? <Field name="email" label="Email" type="email" required /> : null}
             {!editing ? <Field name="password" label="Initial password" type="password" required /> : null}
             <Field name="roll_number" label="Roll number" defaultValue={editing?.roll_number ?? ""} required />
-            <div className="grid grid-cols-2 gap-3">
-              <Field name="batch" label="Batch" defaultValue={editing?.batch ?? ""} />
-              <Field name="section" label="Section" defaultValue={editing?.section ?? ""} />
+            <Field name="batch" label="Batch" defaultValue={editing?.batch ?? ""} />
+            <div className="space-y-1.5">
+              <Label htmlFor="hostel">Hostel</Label>
+              <select
+                id="hostel"
+                name="hostel"
+                defaultValue={editing?.hostel ?? ""}
+                className={nativeSelectClass}
+              >
+                <option value="">Select hostel</option>
+                {hostels
+                  .filter((hostel) => hostel.status === "active" || hostel.name === editing?.hostel)
+                  .map((hostel) => (
+                    <option key={hostel.id} value={hostel.name}>
+                      {hostel.name}
+                    </option>
+                  ))}
+              </select>
             </div>
-            <Field name="phone" label="Phone" defaultValue={editing?.phone ?? ""} />
+            <Field name="room_number" label="Room number" defaultValue={editing?.room_number ?? ""} />
+            <Field name="phone" label="Mobile number" defaultValue={editing?.phone ?? ""} />
             {editing ? (
               <Field name="status" label="Status (active/inactive)" defaultValue={editing.status} />
             ) : null}

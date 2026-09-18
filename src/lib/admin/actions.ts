@@ -2,10 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
+import { isTenDigitPhone } from "@/config/campus";
 import { createAdminClient, hasServiceRoleConfig } from "@/lib/supabase/admin";
 
 function required(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+async function hostelExists(
+  client: ReturnType<typeof createAdminClient>,
+  name: string,
+  activeOnly: boolean,
+) {
+  const query = client.from("hostels").select("id").eq("name", name);
+  const { data } = await (activeOnly ? query.eq("status", "active") : query).maybeSingle();
+  return Boolean(data);
 }
 
 const SERVICE_ROLE_MISSING =
@@ -23,7 +34,16 @@ export async function createStudentAction(formData: FormData) {
   const password = required(formData, "password");
   const rollNumber = required(formData, "roll_number");
   const batch = required(formData, "batch");
-  const section = required(formData, "section");
+  const hostel = required(formData, "hostel");
+  const roomNumber = required(formData, "room_number");
+  const phone = required(formData, "phone");
+
+  if (hostel && !(await hostelExists(admin, hostel, true))) {
+    return { error: "Please select a valid hostel." };
+  }
+  if (phone && !isTenDigitPhone(phone)) {
+    return { error: "Enter a 10-digit mobile number." };
+  }
 
   const { data, error } = await admin.auth.admin.createUser({
     email,
@@ -43,8 +63,9 @@ export async function createStudentAction(formData: FormData) {
       full_name: fullName,
       roll_number: rollNumber,
       batch,
-      section,
-      phone: required(formData, "phone") || null,
+      hostel: hostel || null,
+      room_number: roomNumber || null,
+      phone: phone || null,
       role: "student",
       status: "active",
     })
@@ -67,6 +88,22 @@ export async function updateStudentAction(formData: FormData) {
   const statusValue = required(formData, "status");
   const status = statusValue === "inactive" || statusValue === "archived" ? statusValue : "active";
 
+  const hostel = required(formData, "hostel");
+  const phone = required(formData, "phone");
+  if (hostel) {
+    const { data: hostelRow } = await supabase
+      .from("hostels")
+      .select("id")
+      .eq("name", hostel)
+      .maybeSingle();
+    if (!hostelRow) {
+      return { error: "Please select a valid hostel." };
+    }
+  }
+  if (phone && !isTenDigitPhone(phone)) {
+    return { error: "Enter a 10-digit mobile number." };
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -75,8 +112,9 @@ export async function updateStudentAction(formData: FormData) {
       last_name: lastName,
       roll_number: required(formData, "roll_number") || null,
       batch: required(formData, "batch") || null,
-      section: required(formData, "section") || null,
-      phone: required(formData, "phone") || null,
+      hostel: hostel || null,
+      room_number: required(formData, "room_number") || null,
+      phone: phone || null,
       status,
     })
     .eq("id", id)

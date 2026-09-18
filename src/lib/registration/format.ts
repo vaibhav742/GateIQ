@@ -1,3 +1,5 @@
+export const DEFAULT_EMAIL_DOMAIN = "email.iimcal.ac.in";
+
 export type PublicRegistrationForm = {
   name: string;
   slug: string;
@@ -6,7 +8,27 @@ export type PublicRegistrationForm = {
   batch_number: string;
   batch_name: string;
   registration_suffix: string;
+  hostels: string[];
 };
+
+export function extractEmailLocalPart(value: string, domain: string) {
+  const trimmed = value.trim().toLowerCase();
+  const normalizedDomain = normalizeEmailDomain(domain);
+  if (normalizedDomain && trimmed.endsWith(`@${normalizedDomain}`)) {
+    return trimmed.slice(0, -(normalizedDomain.length + 1));
+  }
+  return trimmed.replace(/@.*$/, "");
+}
+
+export function isEmailLocalPart(value: string) {
+  return /^[a-z0-9._-]+$/.test(value);
+}
+
+export function resolveStudentEmail(value: string) {
+  const local = extractEmailLocalPart(value, DEFAULT_EMAIL_DOMAIN);
+  if (!isEmailLocalPart(local)) return null;
+  return `${local}@${DEFAULT_EMAIL_DOMAIN}`;
+}
 
 export function slugFromBatch(batchNumber: string) {
   return `pgp${batchNumber.trim().toLowerCase()}`;

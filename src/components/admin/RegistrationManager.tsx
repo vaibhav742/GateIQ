@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { AccountStatusBadge } from "@/components/status/CampusStatusBadge";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { cn, nativeSelectClass } from "@/lib/utils";
-import { displayEmailDomain } from "@/lib/registration/format";
+import { DEFAULT_EMAIL_DOMAIN, displayEmailDomain } from "@/lib/registration/format";
 import { deleteStudentAction } from "@/lib/admin/actions";
 import {
   archiveBatchAction,
@@ -19,7 +19,8 @@ import {
   setRegistrationDecisionAction,
   setRegistrationFormStatusAction,
 } from "@/lib/admin/registration-actions";
-import type { Batch, Profile, RegistrationForm } from "@/types/database";
+import { HostelManager } from "@/components/admin/HostelManager";
+import type { Batch, Hostel, Profile, RegistrationForm } from "@/types/database";
 import { formatCampusDateTime } from "@/lib/utils/format";
 
 type Tab = "setup" | "registrations";
@@ -28,10 +29,12 @@ export function RegistrationManager({
   batches,
   forms,
   students,
+  hostels,
 }: {
   batches: Batch[];
   forms: RegistrationForm[];
   students: Profile[];
+  hostels: Hostel[];
 }) {
   const [tab, setTab] = useState<Tab>("setup");
   const [batchId, setBatchId] = useState(batches[0]?.id ?? "");
@@ -175,14 +178,23 @@ export function RegistrationManager({
                     <Input value={batch.batch_number} readOnly className="h-10 bg-muted/50" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="email_domain">Institution email domain</Label>
-                    <Input
-                      id="email_domain"
-                      name="email_domain"
-                      defaultValue={displayEmailDomain(form.email_domain)}
-                      required
-                      className="h-10"
-                    />
+                    <Label htmlFor="email_local_preview">IIM Calcutta email</Label>
+                    <div className="flex items-center rounded-lg border border-input bg-muted/40">
+                      <Input
+                        id="email_local_preview"
+                        value="username"
+                        readOnly
+                        tabIndex={-1}
+                        className="h-10 min-w-0 border-0 bg-transparent shadow-none focus-visible:ring-0"
+                      />
+                      <span className="shrink-0 px-3 text-sm font-medium text-muted-foreground">
+                        {displayEmailDomain(DEFAULT_EMAIL_DOMAIN)}
+                      </span>
+                    </div>
+                    <input type="hidden" name="email_domain" value={DEFAULT_EMAIL_DOMAIN} />
+                    <p className="text-xs text-muted-foreground">
+                      Students type only their username. The domain is fixed as {displayEmailDomain(DEFAULT_EMAIL_DOMAIN)}.
+                    </p>
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -200,7 +212,10 @@ export function RegistrationManager({
                 <input type="hidden" name="auto_approve" value={form.auto_approve ? "true" : "false"} />
                 <div className="rounded-xl border border-border/70 bg-muted/30 p-4 text-sm">
                   <p className="font-medium">Student fields</p>
-                  <p className="mt-2 text-muted-foreground">First name · Last name · IIM Calcutta email · Registration number</p>
+                  <p className="mt-2 text-muted-foreground">
+                    First name · Last name · IIM Calcutta email · Registration number · Hostel · Room number · Mobile
+                    number · Front of ID card
+                  </p>
                 </div>
                 <div className="rounded-xl border border-border/70 p-4">
                   <p className="text-[11px] tracking-wide text-muted-foreground uppercase">Public URL</p>
@@ -236,6 +251,9 @@ export function RegistrationManager({
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">No registration form exists for this batch yet.</p>
             )}
+            <div className="mt-6">
+              <HostelManager hostels={hostels} />
+            </div>
           </section>
 
           <section className="rounded-2xl border border-border/80 bg-white p-5">

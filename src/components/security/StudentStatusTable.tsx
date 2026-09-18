@@ -22,7 +22,7 @@ export function StudentStatusTable({ rows }: { rows: CampusBoardRow[] }) {
               <th className="px-4 py-3">Roll Number</th>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Batch</th>
-              <th className="px-4 py-3">Section</th>
+              <th className="px-4 py-3">Hostel</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Last Action</th>
               <th className="px-4 py-3">Last Gate</th>
@@ -35,7 +35,7 @@ export function StudentStatusTable({ rows }: { rows: CampusBoardRow[] }) {
                 <td className="px-4 py-3 font-medium">{row.roll_number ?? "—"}</td>
                 <td className="px-4 py-3">{row.full_name}</td>
                 <td className="px-4 py-3 text-muted-foreground">{row.batch ?? "—"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{row.section ?? "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{row.hostel ?? "—"}</td>
                 <td className="px-4 py-3">
                   <CampusStatusBadge status={row.campus_status} />
                 </td>

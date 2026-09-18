@@ -7,6 +7,10 @@ export const CAMPUS = {
   qrPrefix: "IIMC:",
 } as const;
 
+export function isTenDigitPhone(value: string) {
+  return /^[0-9]{10}$/.test(value.trim());
+}
+
 export type UserRole = "student" | "security" | "admin";
 export type CampusStatus = "INSIDE" | "OUTSIDE" | "UNKNOWN";
 export type MovementAction = "ENTRY" | "EXIT";

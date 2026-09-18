@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const action = params.get("action");
   const studentId = params.get("studentId");
   const batch = params.get("batch");
-  const section = params.get("section");
+  const hostel = params.get("hostel");
   const roll = params.get("roll");
 
   const boundsStart = campusDayBounds(start).start;
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("entry_exit_logs")
     .select(
-      "timestamp, action, verification_method, student:profiles!entry_exit_logs_student_id_fkey(full_name, roll_number, batch, section, role), gate:gates!entry_exit_logs_gate_id_fkey(name), recorder:profiles!entry_exit_logs_recorded_by_fkey(full_name)",
+      "timestamp, action, verification_method, student:profiles!entry_exit_logs_student_id_fkey(full_name, roll_number, batch, hostel, role), gate:gates!entry_exit_logs_gate_id_fkey(name), recorder:profiles!entry_exit_logs_recorded_by_fkey(full_name)",
     )
     .gte("timestamp", boundsStart)
     .lt("timestamp", boundsEnd)
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         name: student?.full_name ?? "",
         role: student?.role ?? "student",
         batch: student?.batch ?? null,
-        section: student?.section ?? null,
+        hostel: student?.hostel ?? null,
         action: row.action,
         gate: gate?.name ?? "",
         recorded_by: recorder?.full_name ?? null,
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     })
     .filter((row) => {
       if (batch && row.batch !== batch) return false;
-      if (section && row.section !== section) return false;
+      if (hostel && row.hostel !== hostel) return false;
       if (roll && !(row.roll_number ?? "").toLowerCase().includes(roll.toLowerCase())) return false;
       return true;
     });

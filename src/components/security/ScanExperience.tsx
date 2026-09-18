@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { QRScanner } from "@/components/security/QRScanner";
+import { StudentIdCardImage } from "@/components/security/StudentIdCardImage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,7 @@ export function ScanExperience({ gateName }: { gateName: string }) {
   const [manualToken, setManualToken] = useState("");
   const [rollInput, setRollInput] = useState("");
   const [lastRoll, setLastRoll] = useState("");
+  const [verified, setVerified] = useState<LookupSuccess | null>(null);
   const [recordingAction, setRecordingAction] = useState<"ENTRY" | "EXIT" | null>(null);
   const demo = isDemoMode();
 
@@ -62,6 +64,7 @@ export function ScanExperience({ gateName }: { gateName: string }) {
         setPhase({ kind: "error", ...copy });
         return;
       }
+      setVerified(payload);
       setPhase({ kind: "lookup", data: payload });
     } catch {
       setPhase({
@@ -101,6 +104,7 @@ export function ScanExperience({ gateName }: { gateName: string }) {
         setPhase({ kind: "error", ...copy });
         return;
       }
+      setVerified(payload);
       setPhase({ kind: "lookup", data: payload });
     } catch {
       setPhase({
@@ -181,6 +185,7 @@ export function ScanExperience({ gateName }: { gateName: string }) {
 
   function reset() {
     setPhase({ kind: "ready" });
+    setVerified(null);
     setRecordingAction(null);
   }
 
@@ -264,7 +269,10 @@ export function ScanExperience({ gateName }: { gateName: string }) {
           <p className="text-sm font-medium text-emerald-700">
             {mode === "manual" ? "Student found" : "Verified"}
           </p>
-          <h2 className="mt-2 font-heading text-2xl font-semibold">{phase.data.student.name}</h2>
+          <div className="mt-4">
+            <StudentIdCardImage path={phase.data.student.id_card_path} alt={`${phase.data.student.name} ID card`} />
+          </div>
+          <h2 className="mt-4 font-heading text-2xl font-semibold">{phase.data.student.name}</h2>
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Registration no.</dt>
@@ -275,8 +283,12 @@ export function ScanExperience({ gateName }: { gateName: string }) {
               <dd className="mt-1 font-medium">{phase.data.student.batch ?? "—"}</dd>
             </div>
             <div>
-              <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Section</dt>
-              <dd className="mt-1 font-medium">{phase.data.student.section ?? "—"}</dd>
+              <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Hostel</dt>
+              <dd className="mt-1 font-medium">{phase.data.student.hostel ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Room</dt>
+              <dd className="mt-1 font-medium">{phase.data.student.room_number ?? "—"}</dd>
             </div>
             <div>
               <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Current status</dt>
@@ -341,7 +353,10 @@ export function ScanExperience({ gateName }: { gateName: string }) {
                 ? " · Manual"
                 : ""}
           </p>
-          <h2 className="mt-2 font-heading text-2xl font-semibold">{phase.data.student.name}</h2>
+          <div className="mx-auto mt-4 max-w-sm">
+            <StudentIdCardImage path={verified?.student.id_card_path} alt={`${phase.data.student.name} ID card`} />
+          </div>
+          <h2 className="mt-4 font-heading text-2xl font-semibold">{phase.data.student.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{phase.data.student.roll_number}</p>
           <p className="mt-4 text-sm">
             {phase.data.gate} · {formatCampusTime(phase.data.timestamp)}

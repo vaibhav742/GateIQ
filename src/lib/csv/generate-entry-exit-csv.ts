@@ -7,7 +7,7 @@ export type EntryExitCsvRow = {
   name: string;
   role: string;
   batch: string | null;
-  section: string | null;
+  hostel: string | null;
   action: string;
   gate: string;
   recorded_by: string | null;
@@ -20,7 +20,7 @@ const COLUMNS = [
   "Name",
   "Role",
   "Batch",
-  "Section",
+  "Hostel",
   "Action",
   "Gate",
   "Recorded By",
@@ -36,7 +36,7 @@ export function generateEntryExitCSV(rows: EntryExitCsvRow[]) {
       row.name,
       row.role,
       row.batch,
-      row.section,
+      row.hostel,
       row.action,
       row.gate,
       row.recorded_by,
