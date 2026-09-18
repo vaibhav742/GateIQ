@@ -1,5 +1,6 @@
 import { signInAction } from "@/lib/auth/actions";
 import { CAMPUS, isDemoMode } from "@/config/campus";
+import { BrandLockup } from "@/components/brand/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,16 +32,8 @@ export default async function LoginPage({
   return (
     <div className="flex min-h-full items-center justify-center bg-[oklch(0.975_0.006_90)] px-4 py-12">
       <div className="w-full max-w-[400px]">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex size-11 items-center justify-center rounded-xl bg-primary text-xs font-semibold tracking-[0.14em] text-primary-foreground">
-            CA
-          </div>
-          <p className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground uppercase">
-            Campus Access
-          </p>
-          <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight">
-            {CAMPUS.name}
-          </h1>
+        <div className="mb-8">
+          <BrandLockup size="lg" align="center" priority />
         </div>
 
         <div className="rounded-2xl border border-border/80 bg-white p-6 shadow-[0_8px_30px_rgba(16,24,40,0.04)]">
@@ -94,7 +87,7 @@ export default async function LoginPage({
             <p className="mt-2">Password: CampusAccess!2026</p>
           </div>
         ) : (
-          <p className="mt-6 text-center text-xs text-muted-foreground">Campus Access</p>
+          <p className="mt-6 text-center text-xs text-muted-foreground">{CAMPUS.tagline}</p>
         )}
       </div>
     </div>

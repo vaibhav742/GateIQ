@@ -19,6 +19,10 @@ export default async function AdminSettingsPage() {
             <dd className="mt-1 font-medium">{CAMPUS.product}</dd>
           </div>
           <div>
+            <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Tagline</dt>
+            <dd className="mt-1 font-medium">{CAMPUS.tagline}</dd>
+          </div>
+          <div>
             <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Timezone</dt>
             <dd className="mt-1 font-medium">{CAMPUS.timezone}</dd>
           </div>

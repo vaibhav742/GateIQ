@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     default: `${CAMPUS.product} · ${CAMPUS.name}`,
     template: `%s · ${CAMPUS.product}`,
   },
-  description: "Digital campus entry and exit management for IIM Calcutta.",
+  description: CAMPUS.tagline,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

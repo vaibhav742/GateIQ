@@ -1,4 +1,5 @@
 import { toCsv, formatCampusDateTime } from "@/lib/utils/format";
+import { verificationMethodLabel } from "@/lib/registration/format";
 
 export type EntryExitCsvRow = {
   timestamp: string;
@@ -39,7 +40,7 @@ export function generateEntryExitCSV(rows: EntryExitCsvRow[]) {
       row.action,
       row.gate,
       row.recorded_by,
-      row.verification_method,
+      verificationMethodLabel(row.verification_method),
     ]),
   ];
 

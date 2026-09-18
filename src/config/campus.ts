@@ -1,6 +1,8 @@
 export const CAMPUS = {
   name: "IIM Calcutta",
-  product: "Campus Access",
+  product: "GateIQ",
+  tagline: "IIM Calcutta’s Digital Gatekeeper",
+  logo: "/brand/iim-calcutta-logo.png",
   timezone: "Asia/Kolkata",
   qrPrefix: "IIMC:",
 } as const;

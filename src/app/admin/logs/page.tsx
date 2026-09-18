@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/session";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { formatCampusDateTime } from "@/lib/utils/format";
+import { verificationMethodLabel } from "@/lib/registration/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn, nativeSelectClass } from "@/lib/utils";
@@ -148,7 +149,9 @@ export default async function AdminLogsPage({
                       </td>
                       <td className="px-4 py-3">{gate?.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{recorder?.full_name ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{row.verification_method}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {verificationMethodLabel(row.verification_method)}
+                      </td>
                     </tr>
                   );
                 })}

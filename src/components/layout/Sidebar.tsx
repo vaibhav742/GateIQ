@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CAMPUS } from "@/config/campus";
 import type { NavItem } from "@/config/nav";
+import { BrandLockup } from "@/components/brand/BrandMark";
 import { NavIcon } from "@/components/layout/NavIcon";
 import { cn } from "@/lib/utils";
 
@@ -23,14 +23,8 @@ export function Sidebar({
         variant === "desktop" ? "hidden md:sticky md:top-0 md:flex md:h-svh" : "flex h-full",
       )}
     >
-      <div className="flex h-14 items-center gap-2.5 px-5">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-[11px] font-semibold tracking-wide text-primary-foreground">
-          CA
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold tracking-tight">{CAMPUS.product}</p>
-          <p className="truncate text-[11px] text-muted-foreground">{CAMPUS.name}</p>
-        </div>
+      <div className="flex min-h-16 items-center px-4 py-3">
+        <BrandLockup size="sm" />
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 p-3">
         {items.map((item) => {

@@ -1,5 +1,6 @@
 import { formatCampusTime } from "@/lib/utils/format";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { verificationMethodLabel } from "@/lib/registration/format";
 
 export type TimelineEvent = {
   id: string;
@@ -7,6 +8,7 @@ export type TimelineEvent = {
   timestamp: string;
   gate_name: string | null;
   is_admin_override: boolean;
+  verification_method?: string | null;
 };
 
 export function ActivityTimeline({
@@ -35,6 +37,10 @@ export function ActivityTimeline({
             {event.is_admin_override ? (
               <p className="mt-1 text-[11px] font-medium tracking-wide text-amber-700 uppercase">
                 Admin override
+              </p>
+            ) : event.verification_method && event.verification_method !== "QR" ? (
+              <p className="mt-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                {verificationMethodLabel(event.verification_method)}
               </p>
             ) : null}
           </div>

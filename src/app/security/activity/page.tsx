@@ -15,7 +15,7 @@ export default async function SecurityActivityPage() {
   const { data: logs } = await supabase
     .from("entry_exit_logs")
     .select(
-      "id, action, timestamp, is_admin_override, student:profiles!entry_exit_logs_student_id_fkey(full_name), gate:gates!entry_exit_logs_gate_id_fkey(name)",
+      "id, action, timestamp, is_admin_override, verification_method, student:profiles!entry_exit_logs_student_id_fkey(full_name), gate:gates!entry_exit_logs_gate_id_fkey(name)",
     )
     .gte("timestamp", start)
     .lt("timestamp", end)
@@ -31,6 +31,7 @@ export default async function SecurityActivityPage() {
       timestamp: log.timestamp,
       gate_name: gateRow?.name ?? null,
       is_admin_override: log.is_admin_override,
+      verification_method: log.verification_method,
     };
   });
 

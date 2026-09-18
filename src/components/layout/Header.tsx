@@ -13,6 +13,7 @@ import {
 import { Sidebar } from "@/components/layout/Sidebar";
 import type { NavItem } from "@/config/nav";
 import type { Profile } from "@/types/database";
+import { BrandLockup } from "@/components/brand/BrandMark";
 
 export function Header({
   profile,
@@ -24,7 +25,7 @@ export function Header({
   context?: string;
 }) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-border/80 bg-white/90 px-4 backdrop-blur md:px-6">
+    <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-3 border-b border-border/80 bg-white/90 px-4 py-2 backdrop-blur md:h-14 md:px-6 md:py-0">
       <div className="flex min-w-0 items-center gap-2 md:hidden">
         <Sheet>
           <SheetTrigger
@@ -44,10 +45,7 @@ export function Header({
           </SheetContent>
         </Sheet>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">Campus Access</p>
-          {context ? (
-            <p className="truncate text-[11px] text-muted-foreground">{context}</p>
-          ) : null}
+          <BrandLockup size="sm" />
         </div>
       </div>
 

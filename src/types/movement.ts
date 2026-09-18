@@ -27,6 +27,7 @@ export type MovementSuccess = {
   status: "INSIDE" | "OUTSIDE";
   gate: string;
   timestamp: string;
+  verification_method?: "QR" | "MANUAL" | "ADMIN_OVERRIDE" | string;
 };
 
 export type RpcFailure = {
@@ -63,6 +64,26 @@ export function scanErrorCopy(code: string, fallback: string) {
       return {
         title: "Already outside",
         message: "This student was already marked as outside campus.",
+      };
+    case "INVALID_ROLL":
+      return {
+        title: "Check registration number",
+        message: "Enter a registration number like 0308/63.",
+      };
+    case "STUDENT_NOT_FOUND":
+      return {
+        title: "Student not found",
+        message: "No student found with that registration number.",
+      };
+    case "NO_ENTRY_TODAY":
+      return {
+        title: "No entry today",
+        message: "This student has no entry recorded today. Record ENTRY first.",
+      };
+    case "INVALID_ACTION":
+      return {
+        title: "Unable to complete",
+        message: "Choose ENTRY or EXIT.",
       };
     case "NO_GATE":
       return {

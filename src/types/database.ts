@@ -326,8 +326,16 @@ export type Database = {
         Args: { p_qr_token: string };
         Returns: Json;
       };
+      lookup_student_by_roll: {
+        Args: { p_roll_number: string };
+        Returns: Json;
+      };
       record_campus_movement: {
         Args: { p_qr_token: string; p_device_id?: string };
+        Returns: Json;
+      };
+      record_campus_movement_manual: {
+        Args: { p_roll_number: string; p_action: string; p_device_id?: string };
         Returns: Json;
       };
       admin_correct_movement: {

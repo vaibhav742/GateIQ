@@ -3,12 +3,12 @@ import { requireRole } from "@/lib/auth/session";
 import { fetchCampusSummary } from "@/services/campus";
 import { CampusStatusSummary } from "@/components/security/CampusStatusSummary";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { formatCampusTime } from "@/lib/utils/format";
+import { formatCampusTime, campusDateISO } from "@/lib/utils/format";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { MovementActionBadge } from "@/components/status/CampusStatusBadge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { campusDateISO } from "@/lib/utils/format";
+import { verificationMethodLabel } from "@/lib/registration/format";
 
 export default async function AdminDashboardPage() {
   const { supabase } = await requireRole("admin");
@@ -17,7 +17,7 @@ export default async function AdminDashboardPage() {
   const { data: logs } = await supabase
     .from("entry_exit_logs")
     .select(
-      "id, timestamp, action, is_admin_override, student:profiles!entry_exit_logs_student_id_fkey(full_name), gate:gates!entry_exit_logs_gate_id_fkey(name)",
+      "id, timestamp, action, is_admin_override, verification_method, student:profiles!entry_exit_logs_student_id_fkey(full_name), gate:gates!entry_exit_logs_gate_id_fkey(name)",
     )
     .order("timestamp", { ascending: false })
     .limit(12);
@@ -54,7 +54,11 @@ export default async function AdminDashboardPage() {
                       <p className="text-sm font-medium">{student?.full_name}</p>
                       <p className="text-xs text-muted-foreground">
                         {gate?.name}
-                        {log.is_admin_override ? " · Override" : ""}
+                        {log.is_admin_override
+                          ? " · Override"
+                          : log.verification_method && log.verification_method !== "QR"
+                            ? ` · ${verificationMethodLabel(log.verification_method)}`
+                            : ""}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
