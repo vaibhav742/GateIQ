@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
 import { isTenDigitPhone } from "@/config/campus";
 import { createAdminClient, hasServiceRoleConfig } from "@/lib/supabase/admin";
+import { purgeStudentIdCards } from "@/lib/admin/purge-id-cards";
 
 function required(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -129,6 +130,49 @@ export async function updateStudentAction(formData: FormData) {
   return { success: true };
 }
 
+export async function setStudentAccountStatusAction(studentId: string, status: "active" | "inactive") {
+  const { supabase } = await requireRole("admin");
+  const { error } = await supabase
+    .from("profiles")
+    .update({ status })
+    .eq("id", studentId)
+    .eq("role", "student");
+
+  if (error) {
+    return { error: "Unable to update this student's account." };
+  }
+
+  revalidatePath("/admin/students");
+  revalidatePath("/admin/registration");
+  return { success: true };
+}
+
+export async function setStudentAccountsStatusAction(studentIds: string[], status: "active" | "inactive") {
+  const { supabase } = await requireRole("admin");
+  const ids = [...new Set(studentIds.filter(Boolean))];
+  if (!ids.length) {
+    return { error: "Select at least one student." };
+  }
+  if (ids.length > 500) {
+    return { error: "Too many students for one update. Narrow the filters and try again." };
+  }
+
+  const { error, count } = await supabase
+    .from("profiles")
+    .update({ status }, { count: "exact" })
+    .in("id", ids)
+    .eq("role", "student")
+    .neq("status", status);
+
+  if (error) {
+    return { error: "Unable to update the selected student accounts." };
+  }
+
+  revalidatePath("/admin/students");
+  revalidatePath("/admin/registration");
+  return { success: true, updated: count ?? ids.length };
+}
+
 export async function deleteStudentAction(studentId: string, confirmation: string) {
   const { supabase } = await requireRole("admin");
   const { data, error } = await supabase.rpc("delete_student", {
@@ -144,6 +188,8 @@ export async function deleteStudentAction(studentId: string, confirmation: strin
   if (!payload?.success) {
     return { error: payload?.message ?? "Unable to delete this student." };
   }
+
+  await purgeStudentIdCards([studentId]);
 
   revalidatePath("/admin/students");
   revalidatePath("/admin/registration");
@@ -316,4 +362,65 @@ export async function adminOverrideAction(formData: FormData) {
   revalidatePath("/admin/logs");
   revalidatePath("/admin");
   revalidatePath("/admin/reports");
+}
+
+export async function createStudentNoticeAction(formData: FormData) {
+  const { supabase, profile } = await requireRole("admin");
+  const body = required(formData, "body");
+  const audience = required(formData, "audience") === "all" ? "all" : "missing_id";
+  const days = Number(required(formData, "duration_days"));
+
+  if (body.length < 1 || body.length > 500) {
+    return { error: "Enter a notice between 1 and 500 characters." };
+  }
+  if (!Number.isInteger(days) || days < 1 || days > 60) {
+    return { error: "Choose how many days this notice should stay visible, from 1 to 60." };
+  }
+
+  const startsAt = new Date();
+  const endsAt = new Date(startsAt.getTime() + days * 24 * 60 * 60 * 1000);
+  const { error } = await supabase.from("student_notices").insert({
+    body,
+    audience,
+    starts_at: startsAt.toISOString(),
+    ends_at: endsAt.toISOString(),
+    created_by: profile.id,
+  });
+
+  if (error) {
+    return { error: "Unable to push this notice." };
+  }
+
+  revalidatePath("/admin/students");
+  revalidatePath("/student");
+  return { success: true };
+}
+
+export async function endStudentNoticeAction(noticeId: string) {
+  const { supabase } = await requireRole("admin");
+  const { error } = await supabase
+    .from("student_notices")
+    .update({ ends_at: new Date().toISOString() })
+    .eq("id", noticeId);
+
+  if (error) {
+    return { error: "Unable to end this notice." };
+  }
+
+  revalidatePath("/admin/students");
+  revalidatePath("/student");
+  return { success: true };
+}
+
+export async function deleteStudentNoticeAction(noticeId: string) {
+  const { supabase } = await requireRole("admin");
+  const { error } = await supabase.from("student_notices").delete().eq("id", noticeId);
+
+  if (error) {
+    return { error: "Unable to delete this notice." };
+  }
+
+  revalidatePath("/admin/students");
+  revalidatePath("/student");
+  return { success: true };
 }

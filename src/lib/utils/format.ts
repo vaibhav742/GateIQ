@@ -4,6 +4,12 @@ export function encodeQrPayload(token: string) {
   return `${CAMPUS.qrPrefix}${token}`;
 }
 
+export function isLiveStudentQr(expiresAt: string | null | undefined, status?: string) {
+  if (status && status !== "active") return false;
+  if (!expiresAt) return false;
+  return new Date(expiresAt).getTime() > Date.now();
+}
+
 export function campusDateISO(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: CAMPUS.timezone,

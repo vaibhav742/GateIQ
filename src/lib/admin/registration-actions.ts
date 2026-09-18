@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
 import { DEFAULT_EMAIL_DOMAIN, slugFromBatch } from "@/lib/registration/format";
+import { purgeStudentIdCards } from "@/lib/admin/purge-id-cards";
 
 function required(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -33,6 +34,7 @@ export async function createBatchAction(formData: FormData) {
     email_domain: DEFAULT_EMAIL_DOMAIN,
     status: "inactive",
     auto_approve: true,
+    id_card_required: false,
   });
 
   if (formError) {
@@ -76,6 +78,24 @@ export async function saveRegistrationFormAction(formData: FormData) {
   return { success: true };
 }
 
+export async function setRegistrationIdCardRequiredAction(formId: string, required: boolean) {
+  const { supabase } = await requireRole("admin");
+  const { data, error } = await supabase
+    .from("registration_forms")
+    .update({ id_card_required: required })
+    .eq("id", formId)
+    .select("slug")
+    .single();
+  if (error) {
+    return { error: "Unable to update ID card requirement." };
+  }
+  revalidatePath("/admin/registration");
+  if (data?.slug) {
+    revalidatePath("/register/" + data.slug);
+  }
+  return { success: true };
+}
+
 export async function setRegistrationFormStatusAction(formId: string, status: "active" | "inactive") {
   const { supabase } = await requireRole("admin");
   const { data, error } = await supabase
@@ -111,6 +131,15 @@ export async function archiveBatchAction(batchId: string) {
 
 export async function deleteBatchPermanentlyAction(batchId: string, confirmation: string) {
   const { supabase } = await requireRole("admin");
+  const { data: batch } = await supabase.from("batches").select("id, batch_number").eq("id", batchId).maybeSingle();
+  const { data: students } = batch
+    ? await supabase
+        .from("profiles")
+        .select("id")
+        .eq("role", "student")
+        .or(`batch_id.eq.${batch.id},batch.eq.${batch.batch_number}`)
+    : { data: [] as { id: string }[] };
+
   const { data, error } = await supabase.rpc("delete_batch_permanently", {
     p_batch_id: batchId,
     p_confirmation: confirmation,
@@ -122,6 +151,7 @@ export async function deleteBatchPermanentlyAction(batchId: string, confirmation
   if (!payload?.success) {
     return { error: payload?.message ?? "Unable to delete this batch." };
   }
+  await purgeStudentIdCards((students ?? []).map((student) => student.id));
   revalidatePath("/admin/registration");
   revalidatePath("/admin/students");
   revalidatePath("/admin/logs");

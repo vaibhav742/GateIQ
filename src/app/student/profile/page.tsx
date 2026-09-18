@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth/session";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CampusStatusBadge } from "@/components/status/CampusStatusBadge";
-import { StudentIdCardImage } from "@/components/security/StudentIdCardImage";
+import { StudentIdCardSection } from "@/components/student/StudentIdCardSection";
 
 export default async function StudentProfilePage() {
   const { supabase, profile } = await requireRole("student");
@@ -21,14 +21,17 @@ export default async function StudentProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader title="Profile" description="Your campus identity details." />
+      <PageHeader
+        title="Profile"
+        description="Your campus identity details. Photograph your ID here as soon as you receive it."
+      />
       <div className="rounded-2xl border border-border/80 bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Campus status</p>
           <CampusStatusBadge status={status ?? "UNKNOWN"} />
         </div>
-        <div className="mb-6 max-w-sm">
-          <StudentIdCardImage path={profile.id_card_path} alt="Your ID card" />
+        <div className="mb-6">
+          <StudentIdCardSection path={profile.id_card_path} />
         </div>
         <dl className="grid gap-4 sm:grid-cols-2">
           {fields.map(([label, value]) => (

@@ -350,10 +350,6 @@ BEGIN
 
   PERFORM set_config('app.allow_log_purge', 'true', true);
 
-  DELETE FROM storage.objects
-  WHERE bucket_id = 'id-cards'
-    AND name LIKE p_student_id::text || '/%';
-
   DELETE FROM public.entry_exit_logs WHERE student_id = p_student_id;
   DELETE FROM public.student_qr_codes WHERE student_id = p_student_id;
   DELETE FROM public.profiles WHERE id = p_student_id;
@@ -404,10 +400,6 @@ BEGIN
   WHERE student_id = ANY (v_ids);
 
   PERFORM set_config('app.allow_log_purge', 'true', true);
-
-  DELETE FROM storage.objects
-  WHERE bucket_id = 'id-cards'
-    AND split_part(name, '/', 1) IN (SELECT sid::text FROM unnest(v_ids) AS sid);
 
   DELETE FROM public.entry_exit_logs WHERE student_id = ANY (v_ids);
   DELETE FROM public.student_qr_codes WHERE student_id = ANY (v_ids);

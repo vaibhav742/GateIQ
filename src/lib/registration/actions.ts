@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isTenDigitPhone } from "@/config/campus";
 import { createAdminClient, hasServiceRoleConfig } from "@/lib/supabase/admin";
-import { ID_CARD_BUCKET, ID_CARD_MAX_BYTES, idCardObjectPath } from "@/lib/registration/id-card";
+import { ID_CARD_BUCKET, idCardObjectPath, parseIdCardUpload } from "@/lib/registration/id-card";
 import { normalizeEmailDomain, type PublicRegistrationForm } from "@/lib/registration/format";
 
 type CheckResult = {
@@ -45,11 +45,6 @@ export async function registerStudentAction(formData: FormData) {
     return { error: "Passwords do not match." };
   }
 
-  const idCard = await readIdCardUpload(formData.get("id_card"));
-  if ("error" in idCard) {
-    return { error: idCard.error };
-  }
-
   const supabase = await createClient();
   const publicForm = await loadPublicRegistrationForm(slug);
   if (!publicForm) {
@@ -57,6 +52,14 @@ export async function registerStudentAction(formData: FormData) {
   }
   if (!publicForm.hostels.includes(hostel)) {
     return { error: "Please select a hostel." };
+  }
+
+  const idCard = await parseIdCardUpload(formData.get("id_card"));
+  if ("error" in idCard) {
+    return { error: idCard.error };
+  }
+  if (publicForm.id_card_required && !idCard.file) {
+    return { error: "Photograph the front of your ID card." };
   }
 
   const { data: checkData, error: checkError } = await supabase.rpc("check_student_registration", {
@@ -123,13 +126,15 @@ export async function registerStudentAction(formData: FormData) {
     return { error: "Unable to complete registration. Please try again." };
   }
 
-  const uploaded = await storeStudentIdCard(supabase, userId, idCard.file);
-  if (!uploaded) {
-    if (hasServiceRoleConfig()) {
-      await createAdminClient().auth.admin.deleteUser(userId);
+  if (idCard.file) {
+    const uploaded = await storeStudentIdCard(supabase, userId, idCard.file);
+    if (!uploaded) {
+      if (hasServiceRoleConfig()) {
+        await createAdminClient().auth.admin.deleteUser(userId);
+      }
+      await supabase.auth.signOut();
+      return { error: "Could not save the ID photo. Please try registering again." };
     }
-    await supabase.auth.signOut();
-    return { error: "Could not save the ID photo. Please try registering again." };
   }
 
   await supabase.auth.signOut();
@@ -137,6 +142,7 @@ export async function registerStudentAction(formData: FormData) {
   return {
     success: true,
     rollNumber: check.roll_number ?? serial,
+    idUploaded: Boolean(idCard.file),
   };
 }
 
@@ -150,6 +156,7 @@ export async function loadPublicRegistrationForm(slug: string): Promise<PublicRe
     ...payload.form,
     email_domain: normalizeEmailDomain(payload.form.email_domain),
     hostels: parseHostelNames(payload.form.hostels),
+    id_card_required: Boolean(payload.form.id_card_required),
   };
 }
 
@@ -159,7 +166,7 @@ export async function loadAdminRegistrationPreview(slug: string): Promise<Public
 
   const { data: form } = await supabase
     .from("registration_forms")
-    .select("name, slug, status, email_domain, batch_id")
+    .select("name, slug, status, email_domain, batch_id, id_card_required")
     .eq("slug", slug.trim().toLowerCase())
     .maybeSingle();
 
@@ -184,6 +191,7 @@ export async function loadAdminRegistrationPreview(slug: string): Promise<Public
     slug: form.slug,
     status: form.status,
     email_domain: normalizeEmailDomain(form.email_domain),
+    id_card_required: Boolean(form.id_card_required),
     batch_number: batch.batch_number,
     batch_name: batch.name,
     registration_suffix: `/${batch.batch_number}`,
@@ -196,22 +204,6 @@ function parseHostelNames(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
-async function readIdCardUpload(value: FormDataEntryValue | null) {
-  if (!(value instanceof File) || value.size === 0) {
-    return { error: "Photograph the front of your ID card." };
-  }
-  if (value.size > ID_CARD_MAX_BYTES) {
-    return { error: "ID photo is too large. Capture it again." };
-  }
-
-  const bytes = new Uint8Array(await value.arrayBuffer());
-  if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
-    return { error: "Upload a JPEG photo of the front of your ID card." };
-  }
-
-  return { file: new Blob([bytes], { type: "image/jpeg" }) };
-}
-
 async function storeStudentIdCard(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
@@ -221,7 +213,7 @@ async function storeStudentIdCard(
   const storageClient = hasServiceRoleConfig() ? createAdminClient() : supabase;
   const { error: uploadError } = await storageClient.storage.from(ID_CARD_BUCKET).upload(path, file, {
     contentType: "image/jpeg",
-    upsert: true,
+    upsert: false,
     cacheControl: "3600",
   });
   if (uploadError) return false;

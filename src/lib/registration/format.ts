@@ -5,6 +5,7 @@ export type PublicRegistrationForm = {
   slug: string;
   status: "active" | "inactive";
   email_domain: string;
+  id_card_required: boolean;
   batch_number: string;
   batch_name: string;
   registration_suffix: string;

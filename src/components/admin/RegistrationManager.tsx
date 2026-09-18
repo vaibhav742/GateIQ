@@ -18,6 +18,7 @@ import {
   saveRegistrationFormAction,
   setRegistrationDecisionAction,
   setRegistrationFormStatusAction,
+  setRegistrationIdCardRequiredAction,
 } from "@/lib/admin/registration-actions";
 import { HostelManager } from "@/components/admin/HostelManager";
 import type { Batch, Hostel, Profile, RegistrationForm } from "@/types/database";
@@ -214,8 +215,45 @@ export function RegistrationManager({
                   <p className="font-medium">Student fields</p>
                   <p className="mt-2 text-muted-foreground">
                     First name · Last name · IIM Calcutta email · Registration number · Hostel · Room number · Mobile
-                    number · Front of ID card
+                    number · Upload Front Of ID Card
+                    {form.id_card_required ? "" : " (students can skip this and add it later from Profile)"}
                   </p>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4">
+                  <div>
+                    <p className="text-sm font-medium">Require ID card photo</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {form.id_card_required
+                        ? "Students must photograph their ID during registration."
+                        : "Students can register without an ID and upload it later from Profile."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={form.id_card_required}
+                    aria-label="Require ID card photo"
+                    disabled={pending}
+                    onClick={() =>
+                      run(
+                        () => setRegistrationIdCardRequiredAction(form.id, !form.id_card_required),
+                        form.id_card_required
+                          ? "ID card photo is now optional."
+                          : "ID card photo is now required.",
+                      )
+                    }
+                    className={cn(
+                      "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50",
+                      form.id_card_required ? "bg-primary" : "bg-muted",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
+                        form.id_card_required ? "translate-x-5" : "translate-x-0.5",
+                      )}
+                    />
+                  </button>
                 </div>
                 <div className="rounded-xl border border-border/70 p-4">
                   <p className="text-[11px] tracking-wide text-muted-foreground uppercase">Public URL</p>

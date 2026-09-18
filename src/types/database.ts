@@ -117,6 +117,7 @@ export type Database = {
           email_domain: string;
           status: "active" | "inactive";
           auto_approve: boolean;
+          id_card_required: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -128,6 +129,7 @@ export type Database = {
           email_domain: string;
           status?: "active" | "inactive";
           auto_approve?: boolean;
+          id_card_required?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -139,6 +141,7 @@ export type Database = {
           email_domain?: string;
           status?: "active" | "inactive";
           auto_approve?: boolean;
+          id_card_required?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -161,6 +164,36 @@ export type Database = {
           id?: string;
           name?: string;
           status?: "active" | "inactive";
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      student_notices: {
+        Row: {
+          id: string;
+          body: string;
+          audience: "missing_id" | "all";
+          starts_at: string;
+          ends_at: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          body: string;
+          audience?: "missing_id" | "all";
+          starts_at?: string;
+          ends_at: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          body?: string;
+          audience?: "missing_id" | "all";
+          starts_at?: string;
+          ends_at?: string;
+          created_by?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -401,6 +434,7 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Batch = Database["public"]["Tables"]["batches"]["Row"];
 export type RegistrationForm = Database["public"]["Tables"]["registration_forms"]["Row"];
 export type Hostel = Database["public"]["Tables"]["hostels"]["Row"];
+export type StudentNotice = Database["public"]["Tables"]["student_notices"]["Row"];
 export type Gate = Database["public"]["Tables"]["gates"]["Row"];
 export type EntryExitLog = Database["public"]["Tables"]["entry_exit_logs"]["Row"];
 export type StudentQrCode = Database["public"]["Tables"]["student_qr_codes"]["Row"];

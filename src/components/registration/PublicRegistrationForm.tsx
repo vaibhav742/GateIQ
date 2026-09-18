@@ -25,7 +25,7 @@ export function PublicRegistrationForm({
   preview?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ rollNumber: string } | null>(null);
+  const [success, setSuccess] = useState<{ rollNumber: string; idUploaded: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
   const [idCard, setIdCard] = useState<File | null>(null);
 
@@ -39,6 +39,9 @@ export function PublicRegistrationForm({
         </p>
         <p className="mt-3 text-sm text-muted-foreground">
           You can now sign in with your IIM Calcutta username.
+          {success.idUploaded
+            ? " Your ID photo is on file for gate checks."
+            : " When you receive your campus ID, photograph it from Profile. Administration can disable accounts that do not add one."}
         </p>
         <Link
           href="/login"
@@ -105,11 +108,13 @@ export function PublicRegistrationForm({
             setError("Passwords do not match.");
             return;
           }
-          if (!idCard) {
+          if (form.id_card_required && !idCard) {
             setError("Photograph the front of your ID card.");
             return;
           }
-          formData.set("id_card", idCard);
+          if (idCard) {
+            formData.set("id_card", idCard);
+          }
 
           startTransition(async () => {
             const result = await registerStudentAction(formData);
@@ -118,7 +123,10 @@ export function PublicRegistrationForm({
               return;
             }
             if ("success" in result && result.success) {
-              setSuccess({ rollNumber: result.rollNumber ?? "" });
+              setSuccess({
+                rollNumber: result.rollNumber ?? "",
+                idUploaded: Boolean(result.idUploaded),
+              });
             }
           });
         }}
@@ -196,7 +204,12 @@ export function PublicRegistrationForm({
           maxLength={10}
           pattern="[0-9]{10}"
         />
-        <IdCardCapture value={idCard} onChange={setIdCard} disabled={pending || preview} />
+        <IdCardCapture
+          value={idCard}
+          onChange={setIdCard}
+          disabled={pending || preview}
+          optional={!form.id_card_required}
+        />
         <Field id="password" name="password" label="Password" type="password" autoComplete="new-password" />
         <Field
           id="confirm_password"

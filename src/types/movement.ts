@@ -35,12 +35,24 @@ export type MovementSuccess = {
   verification_method?: "QR" | "MANUAL" | "ADMIN_OVERRIDE" | string;
 };
 
+export type ScanStudentCard = {
+  id?: string;
+  name?: string;
+  roll_number?: string | null;
+  batch?: string | null;
+  hostel?: string | null;
+  room_number?: string | null;
+  phone?: string | null;
+  account_status?: string;
+  id_card_path?: string | null;
+};
+
 export type RpcFailure = {
   success: false;
   code: string;
   message: string;
   campus_status?: string;
-  student?: { name?: string; roll_number?: string | null };
+  student?: ScanStudentCard;
 };
 
 export function asRpcPayload<T>(value: unknown): T {
@@ -50,10 +62,19 @@ export function asRpcPayload<T>(value: unknown): T {
 export function scanErrorCopy(code: string, fallback: string) {
   switch (code) {
     case "QR_INVALID":
-    case "QR_REVOKED":
       return {
         title: "QR not recognized",
         message: "This QR is invalid or has been revoked.",
+      };
+    case "QR_EXPIRED":
+      return {
+        title: "QR expired",
+        message: "This QR expired at midnight. Ask the student to generate today's QR in GateIQ.",
+      };
+    case "QR_REVOKED":
+      return {
+        title: "QR replaced",
+        message: "This QR was replaced. Ask the student to show today's campus ID.",
       };
     case "STUDENT_INACTIVE":
       return {

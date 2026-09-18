@@ -21,14 +21,22 @@ import {
   type LookupSuccess,
   type MovementSuccess,
   type RpcFailure,
+  type ScanStudentCard,
 } from "@/types/movement";
 
 type ScanMode = "qr" | "manual";
+type ScanFlag = "expired" | "revoked";
 type Phase =
   | { kind: "ready"; busy?: boolean }
   | { kind: "lookup"; data: LookupSuccess }
   | { kind: "recorded"; data: MovementSuccess }
-  | { kind: "error"; title: string; message: string };
+  | {
+      kind: "error";
+      title: string;
+      message: string;
+      student?: ScanStudentCard;
+      flag?: ScanFlag;
+    };
 
 export function ScanExperience({ gateName }: { gateName: string }) {
   const [mode, setMode] = useState<ScanMode>("qr");
@@ -39,6 +47,16 @@ export function ScanExperience({ gateName }: { gateName: string }) {
   const [verified, setVerified] = useState<LookupSuccess | null>(null);
   const [recordingAction, setRecordingAction] = useState<"ENTRY" | "EXIT" | null>(null);
   const demo = isDemoMode();
+
+  function fail(payload: RpcFailure) {
+    const copy = scanErrorCopy(payload.code, payload.message);
+    setPhase({
+      kind: "error",
+      ...copy,
+      student: payload.student,
+      flag: payload.code === "QR_EXPIRED" ? "expired" : payload.code === "QR_REVOKED" ? "revoked" : undefined,
+    });
+  }
 
   function switchMode(next: ScanMode) {
     setMode(next);
@@ -60,8 +78,7 @@ export function ScanExperience({ gateName }: { gateName: string }) {
       }
       const payload = asRpcPayload<LookupSuccess | RpcFailure>(data);
       if (!payload.success) {
-        const copy = scanErrorCopy(payload.code, payload.message);
-        setPhase({ kind: "error", ...copy });
+        fail(payload);
         return;
       }
       setVerified(payload);
@@ -100,8 +117,7 @@ export function ScanExperience({ gateName }: { gateName: string }) {
       }
       const payload = asRpcPayload<LookupSuccess | RpcFailure>(data);
       if (!payload.success) {
-        const copy = scanErrorCopy(payload.code, payload.message);
-        setPhase({ kind: "error", ...copy });
+        fail(payload);
         return;
       }
       setVerified(payload);
@@ -132,8 +148,7 @@ export function ScanExperience({ gateName }: { gateName: string }) {
       }
       const payload = asRpcPayload<MovementSuccess | RpcFailure>(data);
       if (!payload.success) {
-        const copy = scanErrorCopy(payload.code, payload.message);
-        setPhase({ kind: "error", ...copy });
+        fail(payload);
         return;
       }
       setPhase({ kind: "recorded", data: { ...payload, verification_method: payload.verification_method ?? "QR" } });
@@ -164,8 +179,7 @@ export function ScanExperience({ gateName }: { gateName: string }) {
       }
       const payload = asRpcPayload<MovementSuccess | RpcFailure>(data);
       if (!payload.success) {
-        const copy = scanErrorCopy(payload.code, payload.message);
-        setPhase({ kind: "error", ...copy });
+        fail(payload);
         return;
       }
       setPhase({
@@ -371,10 +385,55 @@ export function ScanExperience({ gateName }: { gateName: string }) {
       ) : null}
 
       {phase.kind === "error" ? (
-        <div className="rounded-2xl border border-border bg-white p-6 text-center">
-          <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+        <div
+          className={cn(
+            "rounded-2xl border p-6 text-center",
+            phase.flag === "expired"
+              ? "border-amber-300 bg-amber-50/80"
+              : phase.flag === "revoked"
+                ? "border-orange-200 bg-orange-50/70"
+                : "border-border bg-white",
+          )}
+        >
+          <p
+            className={cn(
+              "text-[11px] font-medium tracking-[0.16em] uppercase",
+              phase.flag ? "text-amber-800" : "text-muted-foreground",
+            )}
+          >
             {phase.title}
           </p>
+          {phase.student?.name ? (
+            <div className="mx-auto mt-4 max-w-sm text-left">
+              <StudentIdCardImage
+                path={phase.student.id_card_path}
+                alt={`${phase.student.name} ID card`}
+              />
+              <h2 className="mt-4 text-center font-heading text-2xl font-semibold">
+                {phase.student.name}
+              </h2>
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                    Registration no.
+                  </dt>
+                  <dd className="mt-1 font-medium">{phase.student.roll_number ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Hostel</dt>
+                  <dd className="mt-1 font-medium">{phase.student.hostel ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Room</dt>
+                  <dd className="mt-1 font-medium">{phase.student.room_number ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Batch</dt>
+                  <dd className="mt-1 font-medium">{phase.student.batch ?? "—"}</dd>
+                </div>
+              </dl>
+            </div>
+          ) : null}
           <p className="mt-3 text-sm text-muted-foreground">{phase.message}</p>
           <Button className="mt-6 h-12 w-full" size="lg" onClick={reset}>
             {mode === "manual" ? "Try again" : "Scan again"}

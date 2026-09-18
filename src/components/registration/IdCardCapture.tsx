@@ -9,10 +9,12 @@ export function IdCardCapture({
   value,
   onChange,
   disabled,
+  optional,
 }: {
   value: File | null;
   onChange: (file: File | null) => void;
   disabled?: boolean;
+  optional?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -68,7 +70,7 @@ export function IdCardCapture({
         }
       });
     } catch {
-      setError("Camera access is needed to photograph your ID. You can also upload a photo.");
+      setError("Camera access is required. Photograph your ID live — gallery photos are not allowed.");
       setMode("idle");
     }
   }
@@ -101,26 +103,15 @@ export function IdCardCapture({
     }
   }
 
-  async function onFile(file: File | undefined) {
-    if (!file) return;
-    setMode("processing");
-    setError(null);
-    try {
-      const processed = await processIdCardBlob(file);
-      stopCamera();
-      onChange(processed);
-    } catch {
-      setError("Could not read that photo. Use the front of your ID on a dark background.");
-      setMode("idle");
-    }
-  }
-
   return (
     <div className="space-y-2">
-      <Label>Front of ID card</Label>
-      <p className="text-xs text-muted-foreground">
-        Photograph the front of your campus ID. We crop it to the card and compress it for gate checks.
-      </p>
+      <Label>Upload Front Of ID Card</Label>
+      {optional ? (
+        <p className="text-xs text-muted-foreground">
+          Take a live photo of the front of your campus ID. Saved photos from the gallery are not accepted. If you do
+          not have your ID yet, you can add it later from Profile.
+        </p>
+      ) : null}
 
       {mode === "captured" && preview ? (
         <div className="overflow-hidden rounded-xl border border-border/80 bg-black">
@@ -180,26 +171,9 @@ export function IdCardCapture({
             </Button>
           </>
         ) : (
-          <>
-            <Button type="button" className="h-10" disabled={disabled} onClick={() => void startCamera()}>
-              {value ? "Retake photo" : "Photograph ID"}
-            </Button>
-            <label className="inline-flex h-10 cursor-pointer items-center rounded-lg border border-input px-3 text-sm font-medium">
-              Upload photo
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="sr-only"
-                disabled={disabled}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  void onFile(file);
-                }}
-              />
-            </label>
-          </>
+          <Button type="button" className="h-10" disabled={disabled} onClick={() => void startCamera()}>
+            {value ? "Retake photo" : "Photograph ID"}
+          </Button>
         )}
       </div>
     </div>
